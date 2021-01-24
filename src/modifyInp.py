@@ -2,7 +2,10 @@ import os
 import numpy as np
 import swmmio
 
-mymodel = swmmio.Model('result.inp')
+# publicPath
+publicPath = os.path.abspath(os.path.join(os.getcwd()))
+path = publicPath + '\\static\\result.inp'
+mymodel = swmmio.Model(path)
 nodes = mymodel.nodes.dataframe
 print(nodes)
 
