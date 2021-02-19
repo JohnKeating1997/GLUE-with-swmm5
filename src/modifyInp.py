@@ -16,7 +16,7 @@ def pandasDisplaySetup():
   #显示所有列
   pd.set_option('display.max_columns', None)
   #显示所有行
-  # pd.set_option('display.max_rows', None)
+  pd.set_option('display.max_rows', None)
   #设置value的显示长度为100，默认为50
   pd.set_option('max_colwidth',100)
 
@@ -41,12 +41,14 @@ def parseTime(string):
 # publicPath
 publicPath = os.path.abspath(os.path.join(os.getcwd()))
 # filename
-filename = 'baseline.inp'
-path = os.path.join(publicPath,'static',filename)
+inp_file_name = 'baseline.inp'
+out_file_name = 'try-case.inp'
+inp_file_path = os.path.join(publicPath,'static',inp_file_name)
+out_file_path = os.path.join(publicPath,'static','random', out_file_name)
 
 #initialize a baseline model object
 # baseline = swmmio.Model(path)
-baseline = swmmio.core.inp(path)
+baseline = swmmio.core.inp(inp_file_path)
 
 # nodes = baseline.nodes.dataframe
 # links = baseline.links.dataframe
@@ -60,7 +62,7 @@ def setFlowOnAverage(scenario,startTime,endTime):
     startTime:: string, start of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
     endTime:: string, end of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
   return :void
-    generate random.inp in static/random
+    modified inp will be saved as random.inp in static/random
   '''
   timeseries = baseline.timeseries
   # parse startTime and endTime
@@ -84,15 +86,22 @@ def setFlowOnAverage(scenario,startTime,endTime):
     # inflow evenly distributed over a specified period of time
     averageFlow = scenario[i][1]/((endTime-startTime)/step+1)
     timeseriesIndex = scenario[i][0]
-    newFlow = []
-    for j in range(len(timeseries.loc[timeseriesIndex])):
-      originalFlow = float(timeseries.loc[timeseriesIndex,'Value'][j])
-      newFlow.append(originalFlow + averageFlow)
-    # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
-    # so here I use list 'newFlow' to log the new flow value
-    timeseries.loc[timeseriesIndex,'Value'] = newFlow
-      
-    
+    # shallow copy
+    curTimeSeries = timeseries.loc[timeseriesIndex]
+    for j in range(len(curTimeSeries)):
+      curTime = parseTime(curTimeSeries['Time'][j])
+      # modify the timeseries within the range
+      if curTime>=startTime and curTime<=endTime:
+        originalFlow = float(curTimeSeries['Value'][j])
+        # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
+        # any assignment won't affect the original DataFrame
+        timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'][j])&(timeseries.index == timeseriesIndex),'Value'] = originalFlow + averageFlow
+  
+  # save as random.inp in static/random
+  baseline.save(out_file_path)
+
 # test this module
-# setFlowOnAverage([['T1',999999]],'0:00','12:00')
-# print(timeseries)
+setFlowOnAverage([['T1',250]],'0:00','12:00')
+# print(timeseries.loc[['T1','T2']])
+try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
+
