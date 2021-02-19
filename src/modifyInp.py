@@ -1,61 +1,98 @@
 import os
 import numpy as np
 import swmmio
+import sys
+import pandas as pd
+import time
+
+def pandasDisplaySetup():
+  #pandas设置最大显示行和列
+  pd.set_option('display.max_columns',50)
+  pd.set_option('display.max_rows',300)
+  
+  #调整显示宽度，以便整行显示
+  pd.set_option('display.width',1000) 
+  
+  #显示所有列
+  pd.set_option('display.max_columns', None)
+  #显示所有行
+  # pd.set_option('display.max_rows', None)
+  #设置value的显示长度为100，默认为50
+  pd.set_option('max_colwidth',100)
+
+pandasDisplaySetup()
+
+def parseTime(string):
+  """
+    description: parse string to time tuple, if there's no specified date, an informal date '01/01/2000' will be added to the string
+  params :
+    string: the input time string
+  return :
+    ret: timestamp
+
+  """
+  try:
+    ret = time.mktime(time.strptime(string,'%m/%d/%Y %H:%M'))
+  except:
+    # add an informal date '01/01/2000' so that startTime and startTime can be parsed into timestamp
+    ret = time.mktime(time.strptime('01/01/2000 '+str(string),'%m/%d/%Y %H:%M'))
+  return ret
 
 # publicPath
 publicPath = os.path.abspath(os.path.join(os.getcwd()))
-path = publicPath + '\\static\\result.inp'
-mymodel = swmmio.Model(path)
-nodes = mymodel.nodes.dataframe
-print(nodes)
+# filename
+filename = 'baseline.inp'
+path = os.path.join(publicPath,'static',filename)
 
-# print(os.getcwd())
-# def modify_inp(self,infile,pattern,output_name='case_try.inp'):
-#     """
-#     :param infile: 原inp文件
-#     :param pattern: 各个上游节点24小时的流量输入，数组
-#     :return: void，最后生成一个新inp文件,默认值"case_try.inp"
-#     """
-#     """
-#     修改inp文件，最后生成新的inp文件，默认值"case_try.inp"
-#     """
-#     var = []
-#     # 要插入的内容
-#     tmp = ""
-#     for inx in range(len(pattern)):
-#         tmp += (str(np.around(pattern[inx], decimals=3)) + "  ")
-#         if (inx+1) % 24 == 0 and (inx+1) != 1:
-#             var.append(tmp)
-#             tmp = ""
+#initialize a baseline model object
+# baseline = swmmio.Model(path)
+baseline = swmmio.core.inp(path)
 
-#     with open(infile, 'r')as inp:
-#         lines = inp.readlines()
-#         inflow_index = -1
-#         pattern_index = -1
-#         """
-#         找到inflows 和 pattern的插入位置
-#         """
-#         for i, v in enumerate(lines):
-#             if v == '[INFLOWS]\n':
-#                 inflow_index = i + 3  # swmm5 文件有一些注释，所以要跳过两行
-#             if v == '[PATTERNS]\n':
-#                 pattern_index = i + 4
-#             if inflow_index != -1 and pattern_index != -1:
-#                 break
+# nodes = baseline.nodes.dataframe
+# links = baseline.links.dataframe
+timeseries = baseline.timeseries
 
-#         for i in range(len(self.nodes)):
-#             flow_info = str(self.nodes[i]) + '                FLOW             ""               FLOW     1.0      1.0      ' + str(
-#                 self.avg) + '      Pattern' + str(self.nodes[i]) + '\n'
-#             lines.insert(inflow_index, flow_info)
-#             inflow_index += 1
+def setFlowOnAverage(scenario,startTime,endTime):
+  '''
+  description: set the flow evenly distributed over a specified period of time
+  params :
+    scenario:: [[pipe1, inflow1],[pipe2,inflow2],...]
+    startTime:: string, start of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
+    endTime:: string, end of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
+  return :void
+    generate random.inp in static/random
+  '''
+  timeseries = baseline.timeseries
+  # parse startTime and endTime
+  # 1. check if there's specified date
+  try:
+    test = time.mktime(time.strptime(timeseries['Time'][0],'%m/%d/%Y %H:%M'))
+    SpecifyDate = True
+  except:
+    SpecifyDate = False
+  # 2. calculate the timestamp
+  startTime = parseTime(startTime)
+  endTime = parseTime(endTime)
+  
+  # calculate the timeseries step(s)
+  step1 = parseTime(timeseries['Time'][0])
+  step2 = parseTime(timeseries['Time'][1])
+  step = (step2-step1)
 
-#             pattern_info = 'Pattern' + str(self.nodes[i]) + '         HOURLY     ' + var[i] + '\n'
-#             lines.insert(pattern_index, pattern_info)
-#             pattern_index += 1
-#     """
-#     生成新文件
-#     """
-#     if (os.path.exists(output_name)):
-#         os.remove(output_name)
-#     with open(output_name, 'w') as output:
-#         output.writelines(lines)
+  print(startTime, endTime, step)
+  for i in range(0, len(scenario)):
+    # inflow evenly distributed over a specified period of time
+    averageFlow = scenario[i][1]/((endTime-startTime)/step+1)
+    timeseriesIndex = scenario[i][0]
+    newFlow = []
+    for j in range(len(timeseries.loc[timeseriesIndex])):
+      originalFlow = float(timeseries.loc[timeseriesIndex,'Value'][j])
+      newFlow.append(originalFlow + averageFlow)
+    # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
+    # so here I use list 'newFlow' to log the new flow value
+    timeseries.loc[timeseriesIndex,'Value'] = newFlow
+      
+    
+# test this module
+# setFlowOnAverage([['T1',999999]],'0:00','12:00')
+# print(timeseries)
