@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 # the test inps
-static/random
+mock/
 
 # vscode settings
 .vscode

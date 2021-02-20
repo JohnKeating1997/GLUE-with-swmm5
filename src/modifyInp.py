@@ -44,7 +44,7 @@ publicPath = os.path.abspath(os.path.join(os.getcwd()))
 inp_file_name = 'baseline.inp'
 out_file_name = 'try-case.inp'
 inp_file_path = os.path.join(publicPath,'static',inp_file_name)
-out_file_path = os.path.join(publicPath,'static','random', out_file_name)
+out_file_path = os.path.join(publicPath,'mock','random', out_file_name)
 
 #initialize a baseline model object
 # baseline = swmmio.Model(path)
@@ -97,11 +97,11 @@ def setFlowOnAverage(scenario,startTime,endTime):
         # any assignment won't affect the original DataFrame
         timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'][j])&(timeseries.index == timeseriesIndex),'Value'] = originalFlow + averageFlow
   
-  # save as random.inp in static/random
+  # save as random.inp in mock/random
   baseline.save(out_file_path)
 
 # test this module
 setFlowOnAverage([['T1',250]],'0:00','12:00')
 # print(timeseries.loc[['T1','T2']])
-try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
+# try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
 
