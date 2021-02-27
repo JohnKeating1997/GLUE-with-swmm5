@@ -1,6 +1,0 @@
-{
-  "python.pythonPath": "D:\\Anaconda3\\envs\\geo_env\\python.exe",
-  "code-runner.executorMap":{
-    "python": "D:\\Anaconda3\\envs\\geo_env\\python.exe -u",
-  }
-}
