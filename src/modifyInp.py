@@ -49,10 +49,15 @@ out_file_path = os.path.join(publicPath,'mock','random', out_file_name)
 #initialize a baseline model object
 # baseline = swmmio.Model(path)
 baseline = swmmio.core.inp(inp_file_path)
+baselineModel = swmmio.Model(inp_file_path)
+baselineLinks = baselineModel.links.dataframe
+baselineNodes = baselineModel.nodes.dataframe
+timeseries = baseline.timeseries
+inflows = baseline.inflows
 
 # nodes = baseline.nodes.dataframe
 # links = baseline.links.dataframe
-timeseries = baseline.timeseries
+
 
 def setFlowOnAverage(scenario,startTime,endTime):
   '''
@@ -61,10 +66,11 @@ def setFlowOnAverage(scenario,startTime,endTime):
     scenario:: [[pipe1, inflow1],[pipe2,inflow2],...]
     startTime:: string, start of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
     endTime:: string, end of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
+    timeRange: [startTime,endTime)
   return :void
     modified inp will be saved as random.inp in static/random
   '''
-  timeseries = baseline.timeseries
+  # timeseries = baseline.timeseries
   # parse startTime and endTime
   # 1. check if there's specified date
   try:
@@ -80,28 +86,46 @@ def setFlowOnAverage(scenario,startTime,endTime):
   step1 = parseTime(timeseries['Time'][0])
   step2 = parseTime(timeseries['Time'][1])
   step = (step2-step1)
+  # print(startTime, endTime, step)
 
-  print(startTime, endTime, step)
+  # 3. split the pipe RDII into both ends
   for i in range(0, len(scenario)):
+    pipe = scenario[i][0]
     # inflow evenly distributed over a specified period of time
-    averageFlow = scenario[i][1]/((endTime-startTime)/step+1)
-    timeseriesIndex = scenario[i][0]
-    # shallow copy
-    curTimeSeries = timeseries.loc[timeseriesIndex]
-    for j in range(len(curTimeSeries)):
-      curTime = parseTime(curTimeSeries['Time'][j])
-      # modify the timeseries within the range
-      if curTime>=startTime and curTime<=endTime:
-        originalFlow = float(curTimeSeries['Value'][j])
-        # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
-        # any assignment won't affect the original DataFrame
-        timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'][j])&(timeseries.index == timeseriesIndex),'Value'] = originalFlow + averageFlow
+    averageFlow = scenario[i][1] / ((endTime-startTime) / step) / 2
+    inletNode = baselineLinks.loc[pipe]['InletNode']
+    outletNode = baselineLinks.loc[pipe]['OutletNode']
+    inletNodeTimeSeries = inflows.loc[inletNode]['Time Series']
+    inletNodeSfactor = inflows.loc[inletNode]['Sfactor']
+    outletNodeTimeSeries = inflows.loc[outletNode]['Time Series']
+    outletNodeSfactor = inflows.loc[outletNode]['Sfactor']
+    
+    nodes = [
+      {'timeseries' : inletNodeTimeSeries, 'sfactor' : inletNodeSfactor},
+      {'timeseries' : outletNodeTimeSeries, 'sfactor' : outletNodeSfactor}
+    ]
+    for node in nodes:
+      # shallow copy
+      curTimeSeries = timeseries.loc[node['timeseries']]
+      # print(curTimeSeries)
+      for j in range(len(curTimeSeries)):
+        curTime = parseTime(curTimeSeries['Time'].iloc[j])
+        # modify the timeseries within the range
+        if curTime>=startTime and curTime<=endTime:
+          originalFlow = float(curTimeSeries['Value'].iloc[j])
+          # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
+          # any assignment won't affect the original DataFrame
+          newFlow = averageFlow / node['sfactor']
+          timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'].iloc[j])&(timeseries.index == node['timeseries']),'Value'] = originalFlow + newFlow
   
   # save as random.inp in mock/random
+  baseline.timeseries = timeseries
+  if not os.path.exists(os.path.split(out_file_path)[0]):
+    os.makedirs(os.path.split(out_file_path)[0])
   baseline.save(out_file_path)
 
 # test this module
-setFlowOnAverage([['T1',250]],'0:00','12:00')
+setFlowOnAverage([['1',250]],'0:00','12:00')
 # print(timeseries.loc[['T1','T2']])
 # try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
 
