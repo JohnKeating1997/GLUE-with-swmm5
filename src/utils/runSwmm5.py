@@ -9,16 +9,16 @@ out_file_path = os.path.join(publicPath, 'mock', 'random', 'result.xlsx')
 
 def runSimulation(structure, index, type, inp_file_path=inp_file_path,
                   out_file_path=out_file_path):
-    '''
-    description: run a swmm5 simulation
-    :param structure: <[string] | string> type of structure,such as 'SUBCATCH', 'NODE', 'LINK', 'SYS'
-    :param index: <[string] | string> index of specified structure of which the result will be written into xxx.csv
-    :param inp_file_path: <string> absolute path of inp file
-    :param out_file_path: <string> absolute path of output file
-    
-    :return: void
-      generate a csv file to save the result
-    '''
+  '''
+  description: run a swmm5 simulation
+  :param structure: <[string] | string> type of structure,such as 'SUBCATCH', 'NODE', 'LINK', 'SYS'
+  :param index: <[string] | string> index of specified structure of which the result will be written into xxx.csv
+  :param inp_file_path: <string> absolute path of inp file
+  :param out_file_path: <string> absolute path of output file
+  
+  :return: void
+    generate a csv file to save the result
+  '''
   st = SWMM5Simulation(inp_file_path)
   # some configs
   step = st.SWMM_ReportStep # unit:min
@@ -42,6 +42,6 @@ def runSimulation(structure, index, type, inp_file_path=inp_file_path,
       return
     for i in range(len(structure)):
 
-# mock
-st = SWMM5Simulation(inp_file_path)
-print(st.Results('NODE','1',4))
+if __name__ == '__main__':
+  st = SWMM5Simulation(inp_file_path)
+  print(st.Results('NODE','1',4))

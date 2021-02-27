@@ -46,26 +46,24 @@ out_file_name = 'try-case.inp'
 inp_file_path = os.path.join(publicPath,'static',inp_file_name)
 out_file_path = os.path.join(publicPath,'mock','random', out_file_name)
 
-#initialize a baseline model object
-# baseline = swmmio.Model(path)
+#initialize some baseline dataframes
 baseline = swmmio.core.inp(inp_file_path)
 baselineModel = swmmio.Model(inp_file_path)
 baselineLinks = baselineModel.links.dataframe
 baselineNodes = baselineModel.nodes.dataframe
 timeseries = baseline.timeseries
 inflows = baseline.inflows
-
-# nodes = baseline.nodes.dataframe
-# links = baseline.links.dataframe
-
+# print(type(baselineNodes.iloc[0]['InvertElev'])) #numpy.float64
 
 def setFlowOnAverage(scenario,startTime,endTime):
   '''
   description: set the flow evenly distributed over a specified period of time
   params :
-    scenario:: [[pipe1, inflow1],[pipe2,inflow2],...]
-    startTime:: string, start of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
-    endTime:: string, end of the time to be modified, format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
+    scenario: [[pipe1 <string>, inflow1 <float>, startTime1: <string>, endTime1: <string>],
+               [pipe2 <string>,inflow2 <float>, startTime2: <string>, endTime2: <string>],...]
+              note: the time format is expected to be like the following:
+                format:%m/%d/%Y %H:%M, e.g. 12/01/2020 0:00
+              if the date is not be specified, that is ok.
     timeRange: [startTime,endTime)
   return :void
     modified inp will be saved as random.inp in static/random

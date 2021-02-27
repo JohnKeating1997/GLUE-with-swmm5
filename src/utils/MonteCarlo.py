@@ -1,14 +1,32 @@
 # monte-carlo methods
 import numpy as np
-
-def splitRDIIRandomlyIntoPipes(RDII,pipes):
+import random
+# temporarily set the identical startTime & endTime for every pipes
+def splitRDIIRandomlyIntoPipes(RDII, pipes, startTime, endTime):
   '''
   description: split the RDII randomly into different pipes
-  :param structure: <[string] | string> type of structure,such as 'SUBCATCH', 'NODE', 'LINK', 'SYS'
-  :param index: <[string] | string> index of specified structure of which the result will be written into xxx.csv
-  :param inp_file_path: <string> absolute path of inp file
-  :param out_file_path: <string> absolute path of output file
-  
-  :return: void
-    generate a csv file to save the result
+  :param RDII(LPS)
+  :param pipes:: all the pipes that need to init rdii flows. [pipe1s <string>, pipe2 <string>,...]
+  :param startTime:: the start time of the rdii
+  :param endTime:: the end time of the rdii
+  :return:: scenario: [[pipe1 <string>, inflow1 <float>, startTime1: <string>, endTime1: <string>],
+                     [pipe2 <string>,inflow2 <float>, startTime2: <string>, endTime2: <string>],...]
   '''
+  split = [0] # 0 is the start
+  for i in range(len(pipes) - 1):
+    # no need to set the random seed in python
+    split.append(random.random())
+  # sort the split numbers
+  split.sort() # ascendent sort
+  split.append(1) # 1 is the end
+
+  scenario = []
+  idx = 1
+  while(idx < len(split)):
+    curRDII = RDII * (split[idx] - split[idx - 1])
+    scenario.append([pipes[idx - 1], curRDII, startTime, endTime])
+    idx += 1
+  
+  return scenario
+
+# print(splitRDIIRandomlyIntoPipes(100,[1,2,3,4,5],1,1))
