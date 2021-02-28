@@ -11,12 +11,12 @@ def calculateMuAndSigma(candidates,rambda):
   mu = 0
   sigma = 0
   for i,v in enumerate(candidates):
-    if v > rambda:
+    if v[1] > rambda:
       sum_likelyhood += v[1]
   for i,v in enumerate(candidates):
-    if v > rambda:
+    if v[1] > rambda:
       mu += v[1] / sum_likelyhood * v[0]
   for i,v in enumerate(candidates):
-    if v > rambda:
-      sigma += v[1] / sum_likelyhood * np.square(v[0] - mu)
+    if v[1] > rambda:
+      sigma += np.sqrt(v[1] / sum_likelyhood) * abs(v[0] - mu)
   return {'mu': mu, 'sigma': sigma}

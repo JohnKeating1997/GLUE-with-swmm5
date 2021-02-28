@@ -1,5 +1,6 @@
 import sys
 import os
+import pandas as pd
 from sys import path
 from swmm5.swmm5tools import SWMM5Simulation
 
@@ -8,6 +9,8 @@ config = {
   'publicPath': os.path.abspath(os.path.join(os.getcwd()))
 }
 config['utils'] = os.path.join(config['publicPath'], 'src', 'utils')
+config['img'] = os.path.join(config['publicPath'],'mock','random','images')
+config['resultStatistics'] = os.path.join(config['publicPath'],'mock','random','resultStatistics.csv')
 # add the public path to the sys.path
 path.append(config['publicPath'])
 
@@ -16,9 +19,9 @@ from src.utils.modifyInp import setFlowOnAverage
 from src.utils.runSwmm5 import runSimulation
 from src.utils.NashSutcliffe import calculateNashSutcliffe
 from src.utils.statistics import calculateMuAndSigma
-
+from src.utils.plot import plotNormalDistribution
 # set the iteration times
-ITERATION_TIMES = 5
+ITERATION_TIMES = 5000
 # total RDII of the sewer systems
 RDII = 84 # LPS
 if __name__ == "__main__":
@@ -67,7 +70,10 @@ if __name__ == "__main__":
   # 2.5 calculate the statistical property of every scenario
   pipeStatistics = {}
   for pipe in pipesCandidates:
-    pipeStatistics[pipe] = calculateMuAndSigma(pipesCandidates[pipe], rambda = 0.6)
-  # 2.6 print the result
-  print(pipeStatistics)
-
+    res = calculateMuAndSigma(pipesCandidates[pipe], rambda = 0.6)
+    pipeStatistics[pipe] = res
+    # 2.6 plot the result and save it
+    plotNormalDistribution(res['mu'], res['sigma'], os.path.join(config['img'], str(pipe)+'.png'))
+  # 2.7 save the resultStatistics.csv
+  pipeStatisticsDf = pd.DataFrame(pipeStatistics)
+  pipeStatisticsDf.to_csv(config['resultStatistics'], index = 0)

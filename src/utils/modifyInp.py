@@ -47,7 +47,6 @@ config = {
 config['inp_file_path'] = os.path.join(config['publicPath'], 'static', config['inp_file_name'])
 config['out_file_path'] = os.path.join(config['publicPath'], 'mock', 'random', config['out_file_name'])
 
-
 #initialize some baseline dataframes
 baseline = swmmio.core.inp(config['inp_file_path'])
 baselineModel = swmmio.Model(config['inp_file_path'])
@@ -55,6 +54,10 @@ baselineLinks = baselineModel.links.dataframe
 baselineNodes = baselineModel.nodes.dataframe
 
 timeseries = baseline.timeseries
+
+config['timeColumnIndex'] = list(baseline.timeseries.columns).index('Time')
+config['valueColumnIndex'] = list(baseline.timeseries.columns).index('Value')
+
 inflows = baseline.inflows
 # print(type(baselineNodes.iloc[0]['InvertElev'])) #numpy.float64
 
@@ -86,9 +89,8 @@ def setFlowOnAverage(scenario,inp_file_path = config['inp_file_path'], out_file_
   # print(startTime, endTime, step)
 
   # 3. split the pipe RDII into both ends
-  
+  nodes = {}
   for i in range(0, len(scenario)):
-    print(i)
     # endBonus is to handle the outlet node is the outfall
     endBonus = 1
     pipe = scenario[i][0]
@@ -104,30 +106,47 @@ def setFlowOnAverage(scenario,inp_file_path = config['inp_file_path'], out_file_
     try:
       outletNodeTimeSeries = inflows.loc[outletNode]['Time Series']
       outletNodeSfactor = inflows.loc[outletNode]['Sfactor']
-      nodes = [
-      {'timeseries' : inletNodeTimeSeries, 'sfactor' : inletNodeSfactor},
-      {'timeseries' : outletNodeTimeSeries, 'sfactor' : outletNodeSfactor}
-      ]
+      inlet = {'newValue' : averageFlow / inletNodeSfactor * endBonus,
+      'startTime': startTime, 'endTime': endTime}
+      outlet = {'newValue' : averageFlow / outletNodeSfactor * endBonus,
+      'startTime': startTime, 'endTime': endTime}
     except:
-      nodes = [{'timeseries' : inletNodeTimeSeries, 'sfactor' : inletNodeSfactor}]
       endBonus = 2
-    
-    for node in nodes:
-      # shallow copy
-      curTimeSeries = timeseries.loc[node['timeseries']]
-      # print(curTimeSeries)
-      for j in range(len(curTimeSeries)):
-        curTime = parseTime(curTimeSeries['Time'].iloc[j])
-        # modify the timeseries within the range
-        if curTime >= startTime and curTime <= endTime:
-          originalFlow = float(curTimeSeries['Value'].iloc[j])
-          # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
-          # any assignment won't affect the original DataFrame
-          newFlow = averageFlow / node['sfactor'] * endBonus
-          timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'].iloc[j])&(timeseries.index == node['timeseries']),'Value'] = originalFlow + newFlow
-        elif curTime > endTime:
-          break
-  
+      inlet = {'newValue' : averageFlow / inletNodeSfactor * endBonus,
+      'startTime': startTime, 'endTime': endTime}
+      outlet = None
+    if inletNodeTimeSeries in nodes.keys():
+      # TODOS: assume the pipes share the same RDII time mode
+      nodes[inletNodeTimeSeries]['newValue'] += inlet['newValue'] 
+    else:
+      nodes[inletNodeTimeSeries] = inlet
+    if outlet is not None:
+      if outletNodeTimeSeries in nodes.keys():
+        nodes[outletNodeTimeSeries]['newValue'] += outlet['newValue'] 
+      else:
+        nodes[outletNodeTimeSeries] = outlet
+    # for node in nodes:
+    #   # shallow copy
+    #   curTimeSeries = timeseries.loc[node['timeseries']]
+    #   # print(curTimeSeries)
+    #   for j in range(len(curTimeSeries)):
+    #     curTime = parseTime(curTimeSeries['Time'].iloc[j])
+    #     # modify the timeseries within the range
+    #     if curTime >= startTime and curTime <= endTime:
+    #       originalFlow = float(curTimeSeries['Value'].iloc[j])
+    #       # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
+    #       # any assignment won't affect the original DataFrame
+    #       newFlow = averageFlow / node['sfactor'] * endBonus
+    #       timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'].iloc[j])&(timeseries.index == node['timeseries']),'Value'] = originalFlow + newFlow
+    #     elif curTime > endTime:
+    #       break
+  # traverse the timeseries dataframe (very time consuming)
+  for i in range(len(timeseries)):
+    curTime = parseTime(timeseries.iloc[i,config['timeColumnIndex']])
+    timeseriesIndex = timeseries.index[i]
+    node = nodes[timeseriesIndex]
+    if curTime >= node['startTime'] and curTime < node['endTime']:
+      timeseries.iloc[i,config['valueColumnIndex']] = float(timeseries.iloc[i,config['valueColumnIndex']]) + node['newValue']
   # save as random.inp in mock/random
   baseline.timeseries = timeseries
   if not os.path.exists(os.path.split(out_file_path)[0]):
