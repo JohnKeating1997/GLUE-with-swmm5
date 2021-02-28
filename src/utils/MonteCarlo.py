@@ -7,8 +7,8 @@ def splitRDIIRandomlyIntoPipes(RDII, pipes, startTime, endTime):
   description: split the RDII randomly into different pipes
   :param RDII(LPS)
   :param pipes:: all the pipes that need to init rdii flows. [pipe1s <string>, pipe2 <string>,...]
-  :param startTime:: the start time of the rdii
-  :param endTime:: the end time of the rdii
+  :param startTime:: [startTime1 <string>, startTime2 <string>, ...] the start time of the rdii
+  :param endTime:: [endTime1 <string>, endTime2 <string>] the end time of the rdii
   :return:: scenario: [[pipe1 <string>, inflow1 <float>, startTime1: <string>, endTime1: <string>],
                      [pipe2 <string>,inflow2 <float>, startTime2: <string>, endTime2: <string>],...]
   '''
@@ -24,7 +24,7 @@ def splitRDIIRandomlyIntoPipes(RDII, pipes, startTime, endTime):
   idx = 1
   while(idx < len(split)):
     curRDII = RDII * (split[idx] - split[idx - 1])
-    scenario.append([pipes[idx - 1], curRDII, startTime, endTime])
+    scenario.append([pipes[idx - 1], curRDII, startTime[idx - 1], endTime[idx - 1]])
     idx += 1
   
   return scenario

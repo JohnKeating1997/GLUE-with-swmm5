@@ -8,8 +8,8 @@ swmm5
 
 example-case.inp
 informal RDII:
-  conduit 37 : 48LPS (distributed evenly between 0:00-5:30)
-  conduit 53 : 36LPS (distributed evenly between 3:00-8:30)
+  conduit 37 : 48LPS (distributed evenly between 03:00-10:30)
+  conduit 53 : 36LPS (distributed evenly between 03:00-10:30)
 
 STAGE1:
   已知RDII在某段时间内的值，然后在空间上将RDII值分配到各个管段i上（再均分到i两端的节点上），时间上暂时采用均分的方式(TODOS:后期根据监测数据的波动情况提供prior distribution)

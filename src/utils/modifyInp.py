@@ -53,11 +53,12 @@ baseline = swmmio.core.inp(config['inp_file_path'])
 baselineModel = swmmio.Model(config['inp_file_path'])
 baselineLinks = baselineModel.links.dataframe
 baselineNodes = baselineModel.nodes.dataframe
+
 timeseries = baseline.timeseries
 inflows = baseline.inflows
 # print(type(baselineNodes.iloc[0]['InvertElev'])) #numpy.float64
 
-def setFlowOnAverage(scenario,startTime,endTime,inp_file_path = config['inp_file_path'], out_file_path = config['out_file_path']):
+def setFlowOnAverage(scenario,inp_file_path = config['inp_file_path'], out_file_path = config['out_file_path']):
   '''
   description: set the flow evenly distributed over a specified period of time
   params :
@@ -77,32 +78,40 @@ def setFlowOnAverage(scenario,startTime,endTime,inp_file_path = config['inp_file
     SpecifyDate = True
   except:
     SpecifyDate = False
-  # 2. calculate the timestamp
-  startTime = parseTime(startTime)
-  endTime = parseTime(endTime)
-  
-  # calculate the timeseries step(s)
+
+  # 2. calculate the timeseries step(s)
   step1 = parseTime(timeseries['Time'][0])
   step2 = parseTime(timeseries['Time'][1])
   step = (step2-step1)
   # print(startTime, endTime, step)
 
   # 3. split the pipe RDII into both ends
+  
   for i in range(0, len(scenario)):
+    print(i)
+    # endBonus is to handle the outlet node is the outfall
+    endBonus = 1
     pipe = scenario[i][0]
     # inflow evenly distributed over a specified period of time
+    startTime = parseTime(scenario[i][2])
+    endTime = parseTime(scenario[i][3])
     averageFlow = scenario[i][1] / ((endTime-startTime) / step) / 2
     inletNode = baselineLinks.loc[pipe]['InletNode']
     outletNode = baselineLinks.loc[pipe]['OutletNode']
     inletNodeTimeSeries = inflows.loc[inletNode]['Time Series']
     inletNodeSfactor = inflows.loc[inletNode]['Sfactor']
-    outletNodeTimeSeries = inflows.loc[outletNode]['Time Series']
-    outletNodeSfactor = inflows.loc[outletNode]['Sfactor']
-    
-    nodes = [
+    # in case the outlet node is the outfall
+    try:
+      outletNodeTimeSeries = inflows.loc[outletNode]['Time Series']
+      outletNodeSfactor = inflows.loc[outletNode]['Sfactor']
+      nodes = [
       {'timeseries' : inletNodeTimeSeries, 'sfactor' : inletNodeSfactor},
       {'timeseries' : outletNodeTimeSeries, 'sfactor' : outletNodeSfactor}
-    ]
+      ]
+    except:
+      nodes = [{'timeseries' : inletNodeTimeSeries, 'sfactor' : inletNodeSfactor}]
+      endBonus = 2
+    
     for node in nodes:
       # shallow copy
       curTimeSeries = timeseries.loc[node['timeseries']]
@@ -110,12 +119,14 @@ def setFlowOnAverage(scenario,startTime,endTime,inp_file_path = config['inp_file
       for j in range(len(curTimeSeries)):
         curTime = parseTime(curTimeSeries['Time'].iloc[j])
         # modify the timeseries within the range
-        if curTime>=startTime and curTime<=endTime:
+        if curTime >= startTime and curTime <= endTime:
           originalFlow = float(curTimeSeries['Value'].iloc[j])
           # note: because of chained index, timeseries.loc[timeseriesIndex,'Value'][j] is just a copy of a slice from a DataFrame
           # any assignment won't affect the original DataFrame
-          newFlow = averageFlow / node['sfactor']
+          newFlow = averageFlow / node['sfactor'] * endBonus
           timeseries.loc[(timeseries['Time'] == curTimeSeries['Time'].iloc[j])&(timeseries.index == node['timeseries']),'Value'] = originalFlow + newFlow
+        elif curTime > endTime:
+          break
   
   # save as random.inp in mock/random
   baseline.timeseries = timeseries
