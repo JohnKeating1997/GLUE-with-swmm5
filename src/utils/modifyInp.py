@@ -38,24 +38,26 @@ def parseTime(string):
     ret = time.mktime(time.strptime('01/01/2000 '+str(string),'%m/%d/%Y %H:%M'))
   return ret
 
-# publicPath
-publicPath = os.path.abspath(os.path.join(os.getcwd()))
-# filename
-inp_file_name = 'baseline.inp'
-out_file_name = 'try-case.inp'
-inp_file_path = os.path.join(publicPath,'static',inp_file_name)
-out_file_path = os.path.join(publicPath,'mock','random', out_file_name)
+# configs
+config = {
+  'inp_file_name': 'baseline.inp',
+  'out_file_name': 'try-case.inp',
+  'publicPath': os.path.abspath(os.path.join(os.getcwd()))
+}
+config['inp_file_path'] = os.path.join(config['publicPath'], 'static', config['inp_file_name'])
+config['out_file_path'] = os.path.join(config['publicPath'], 'mock', 'random', config['out_file_name'])
+
 
 #initialize some baseline dataframes
-baseline = swmmio.core.inp(inp_file_path)
-baselineModel = swmmio.Model(inp_file_path)
+baseline = swmmio.core.inp(config['inp_file_path'])
+baselineModel = swmmio.Model(config['inp_file_path'])
 baselineLinks = baselineModel.links.dataframe
 baselineNodes = baselineModel.nodes.dataframe
 timeseries = baseline.timeseries
 inflows = baseline.inflows
 # print(type(baselineNodes.iloc[0]['InvertElev'])) #numpy.float64
 
-def setFlowOnAverage(scenario,startTime,endTime):
+def setFlowOnAverage(scenario,startTime,endTime,inp_file_path = config['inp_file_path'], out_file_path = config['out_file_path']):
   '''
   description: set the flow evenly distributed over a specified period of time
   params :
@@ -68,7 +70,6 @@ def setFlowOnAverage(scenario,startTime,endTime):
   return :void
     modified inp will be saved as random.inp in static/random
   '''
-  # timeseries = baseline.timeseries
   # parse startTime and endTime
   # 1. check if there's specified date
   try:
@@ -122,8 +123,9 @@ def setFlowOnAverage(scenario,startTime,endTime):
     os.makedirs(os.path.split(out_file_path)[0])
   baseline.save(out_file_path)
 
-# test this module
-setFlowOnAverage([['1',250]],'0:00','12:00')
-# print(timeseries.loc[['T1','T2']])
-# try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
+if __name__ == '__main__':
+  # test this module
+  setFlowOnAverage([['1',250]],'0:00','12:00')
+  # print(timeseries.loc[['T1','T2']])
+  # try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
 

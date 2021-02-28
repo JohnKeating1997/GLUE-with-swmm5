@@ -2,17 +2,23 @@ import os
 import pandas as pd
 import time
 from swmm5.swmm5tools import SWMM5Simulation
-from inpOptions import configInp
-# publicPath
-publicPath = os.path.abspath(os.path.join(os.getcwd()))
-inp_file_path = os.path.join(publicPath, 'mock', 'random', 'try-case.inp')
-out_file_path = os.path.join(publicPath, 'mock', 'random', 'result.csv')
+from .inpOptions import configInp
+# some configs
+config = {
+  'publicPath': os.path.abspath(os.path.join(os.getcwd())),
+  'observed_data': 'observed_date.csv',
+  'simulated_data': 'simulated_data.csv',
+}
+config['inp_file_path'] = os.path.join(config['publicPath'], 'mock', 'random', 'try-case.inp')
+config['out_file_path'] = os.path.join(config['publicPath'], 'mock', 'random', 'result.csv')
 
-NODE_ReSULT_TYPE = ['LEVEL(m)','Hydraulic head(m)','Volume of stored + ponded water(m3)', 
-                    'Lateral inflow (LPS)', 'Total inflow(LPS)', 'Flow lost to flooding(LPS)', 'Concentration(mg/l)']
-LINK_ReSULT_TYPE = []
-def runSimulation(structure, index, type, inp_file_path=inp_file_path,
-                  out_file_path=out_file_path):
+NODE_RESULT_TYPE = ['LEVEL(m)','Hydraulic head(m)','Volume of stored + ponded water(m3)', 
+                    'Lateral inflow (LPS)', 'Total inflow(LPS)', 'Flow lost to flooding(LPS)', 
+                    'Concentration(mg/l)']
+LINK_RESULT_TYPE = ['Flow rate(LPS)', 'Flow depth(m)', 'Flow velocity(m/s)',
+                    'Froude number', 'Capacity', 'Concentration(mg/l)']
+
+def runSimulation(structure, index, resultType, inp_file_path, out_file_path):
   '''
   description: run a swmm5 simulation
   :param structure: <[string] | string> type of structure,such as 'SUBCATCH', 'NODE', 'LINK', 'SYS'
@@ -72,9 +78,21 @@ def runSimulation(structure, index, type, inp_file_path=inp_file_path,
   :return: <generator object SWMM5Simulation.Results at 0x00000207600ED660>
   :output: generate the result.csv to save the result if the output path specified
   '''
+  # preprocess the params
+  structure, index, resultType
+  if not isinstance(structure, list):
+    structure = [structure]
+  if not isinstance(index, list):
+    index = [index]
+  if not isinstance(resultType, list):
+    resultType = [resultType]
   # run the simulation
   st = SWMM5Simulation(inp_file_path)
-  # if the output path specified
+  # validate the params
+  if len(structure) != len(index) or len(structure) != len(resultType):
+      raise Exception('length of structure and index don\'t match')
+      return st
+  # if need to generate result.csv
   if out_file_path:
     if not os.path.exists(os.path.split(out_file_path)[0]):
       os.makedirs(os.path.split(out_file_path)[0])
@@ -85,7 +103,7 @@ def runSimulation(structure, index, type, inp_file_path=inp_file_path,
     reportStartTime = infoDict['REPORT_START_TIME']
     endDate = infoDict['END_DATE']
     endTime = infoDict['END_TIME']
-    reportStartTimeStamp = time.mktime(time.strptime(reportStartDate+' '+reportStartTime,'%m/%d/%Y %H:%M%S'))
+    reportStartTimeStamp = time.mktime(time.strptime(reportStartDate+' '+reportStartTime,'%m/%d/%Y %H:%M:%S'))
     endTimeStamp = time.mktime(time.strptime(endDate+' '+endTime,'%m/%d/%Y %H:%M:%S'))
     # dict that save the result
     result = {
@@ -95,40 +113,44 @@ def runSimulation(structure, index, type, inp_file_path=inp_file_path,
       'DATE': [],
       'TYPE': []
     }
-    # multiple structures
-    if isinstance(structure,list) and isinstance(index,list):
-      if len(structure)!=len(index):
-        print('length of structure and index don\'t match')
-        return st
-      # for every structure
-      for i in range(len(structure)):
-        if structure[i] == 'NODE':
-          vals = st.Results('NODE', str(index[i]), type[i])
-          result['VALUE'] += vals
-          curTimeStamp = 0
-          for i in range(len(vals)):
-            curTimeStamp = reportStartTimeStamp + 30 * 60 * 1000 * i
-            result['INDEX'].append(index[i])
-            result['TIME'].append(time.strftime('%H:%M:%S', time.localtime(curTimeStamp)))
-            result['DATE'].append(time.strftime('%m/%d/%Y', time.localtime(curTimeStamp)))
-            result['TYPE'].append()
-        elif structure[i] == 'LINK':
-          pass
-        elif structure[i] == 'SUBCATCH':
-          pass
-        elif structure[i] == 'SYS':
-          pass
-        else:
-          pass
-    elif (not isinstance(structure,list)) and (not isinstance(index,list)):
-      pass
-    else:
-      raise Exception('length of structure and index don\'t match')
-      return st
-  # return the st object
+    # for every structure
+    for i in range(len(structure)):
+      if structure[i] == 'NODE':
+        vals = list(st.Results('NODE', str(index[i]), resultType[i]))
+        result['VALUE'] += vals
+        curTimeStamp = 0
+        for j in range(len(vals)):
+          curTimeStamp = reportStartTimeStamp + 30 * 60 * 1000 * i
+          result['INDEX'].append(index[i])
+          result['TIME'].append(time.strftime('%H:%M:%S', time.localtime(curTimeStamp)))
+          result['DATE'].append(time.strftime('%m/%d/%Y', time.localtime(curTimeStamp)))
+          result['TYPE'].append(NODE_RESULT_TYPE[resultType[i]])
+      elif structure[i] == 'LINK':
+        vals = list(st.Results('LINK', str(index[i]), resultType[i]))
+        result['VALUE'] += vals
+        curTimeStamp = 0
+        for j in range(len(vals)):
+          curTimeStamp = reportStartTimeStamp + 30 * 60 * 1000 * i
+          result['INDEX'].append(index[i])
+          result['TIME'].append(time.strftime('%H:%M:%S', time.localtime(curTimeStamp)))
+          result['DATE'].append(time.strftime('%m/%d/%Y', time.localtime(curTimeStamp)))
+          result['TYPE'].append(LINK_RESULT_TYPE[resultType[i]])
+      elif structure[i] == 'SUBCATCH':
+        # TODOS
+        pass
+      elif structure[i] == 'SYS':
+        # TODOS
+        pass
+      else:
+        # REMAIN
+        pass
+    df = pd.DataFrame(result)
+    # index = 0 means no index column
+    df.to_csv(out_file_path,index = 0)
+  # finally, return the st object
   return st
 
 if __name__ == '__main__':
   # st = SWMM5Simulation(inp_file_path)
   # print(st.Results('NODE','1',4))
-  runSimulation([],[],[])
+  runSimulation(['NODE','LINK'],['1','4'],[0,0])
