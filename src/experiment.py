@@ -1,3 +1,11 @@
+'''
+Author: your name
+Date: 2021-03-01 18:50:16
+LastEditTime: 2021-05-25 22:39:15
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: \GLUE-with-swmm5\src\experiment.py
+'''
 import sys
 import os
 import pandas as pd
