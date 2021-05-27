@@ -1,3 +1,11 @@
+'''
+Author: your name
+Date: 2021-05-25 22:38:08
+LastEditTime: 2021-05-26 21:48:54
+LastEditors: your name
+Description: In User Settings Edit
+FilePath: \GLUE-with-swmm5\src\utils\NashSutcliffe.py
+'''
 # calculate the Nash-Sutcliffe efficiency coefficient
 import os
 import numpy as np

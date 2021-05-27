@@ -72,7 +72,7 @@ def runSimulation(structure, index, resultType, inp_file_path, out_file_path):
     1       1.324   00:30  01/01/2020   LEVEL(m)
     2       1.484   01:00  02/01/2020   LEVEL(m)
     ...
-    1       0.482   00:30  01/01/2020   FLOW(LPS)
+    i       0.482   00:30  01/01/2020   FLOW(LPS)
     ...
   
   :return: <generator object SWMM5Simulation.Results at 0x00000207600ED660>
