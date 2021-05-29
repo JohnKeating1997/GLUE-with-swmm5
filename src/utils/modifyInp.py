@@ -66,15 +66,20 @@ class Inp:
 
   def __init__(self,inp_file_path,out_file_path):
     if not inp_file_path:
-      inp_file_path = config['inp_file_path']
+      self.inp_file_path = config['inp_file_path']
+    else:
+      self.inp_file_path = inp_file_path
     if not out_file_path:
-      out_file_path = config['out_file_path']
+      self.out_file_path = config['out_file_path']
+    else:
+      self.out_file_path = out_file_path
     #initialize some baseline dataframes
-    self.baseline = swmmio.core.inp(config['inp_file_path'])
-    self.baselineModel = swmmio.Model(config['inp_file_path'])
+    self.baseline = swmmio.core.inp(inp_file_path)
+    self.baselineModel = swmmio.Model(inp_file_path)
     self.baselineLinks = self.baselineModel.links.dataframe
     self.baselineNodes = self.baselineModel.nodes.dataframe 
     self.timeseries = self.baseline.timeseries # any changes should be made on deep copy of self.timeseries
+    self.inflows = self.baseline.inflows
     # print(type(baselineNodes.iloc[0]['InvertElev'])) #numpy.float64
 
   def setFlowOnAverage(self,scenario,inp_file_path = config['inp_file_path'], out_file_path = config['out_file_path']):
@@ -177,7 +182,7 @@ class Inp:
     values,
     time_list,
     nodes_name,
-    out_file_path = config['out_file_path']
+    out_file_path
   ):
     """
     Transfer flat values list into timeseries DataFrame and append it into the new inp file
@@ -204,14 +209,14 @@ class Inp:
     value_column = values
     # cover the node name to the corresponding time series name
     for node_name in nodes_name:
-      timeseries_name_column.append([self.inflows.loc[node_name,'Time Series']] * len(time_list))
+      timeseries_name_column += [self.inflows.loc[str(node_name),'Time Series']] * len(time_list)
     # calculate the date_column and the time_column from time_list
     for _ in time_list:
       date_column.append(formatTime('%m/%d/%Y',_))
       time_column.append(formatTime(' %H:%M',_))
     # fill the date_column and time_column for every timeseries name
-    date_column = [date_column] * len(nodes_name)
-    time_column = [time_column] * len(nodes_name)
+    date_column = date_column * len(nodes_name)
+    time_column = time_column * len(nodes_name)
     # a temp dict
     tmp = {
       'Name': timeseries_name_column,
@@ -226,6 +231,8 @@ class Inp:
     self.baseline.timeseries = pd.concat([self.timeseries, new_timeseries],axis = 0, ignore_index=True)
 
     # 4. save a new inp file
+    if not out_file_path:
+      out_file_path = self.out_file_path
     if not os.path.exists(os.path.split(out_file_path)[0]):
       # make directory if it doesn't exist
       os.makedirs(os.path.split(out_file_path)[0])
@@ -243,9 +250,9 @@ if __name__ == '__main__':
   # print(timeseries.loc[['T1','T2']])
   # try_case = swmmio.Model(os.path.join(publicPath,'static','random','try-case.inp'))
 
-  baseline = swmmio.core.inp(config['inp_file_path'])
-  baselineModel = swmmio.Model(config['inp_file_path'])
-  baselineLinks = baselineModel.links.dataframe
-  baselineNodes = baselineModel.nodes.dataframe
-  timeseries = baseline.timeseries
-  print()
+  # baseline = swmmio.core.inp(config['inp_file_path'])
+  # baselineModel = swmmio.Model(config['inp_file_path'])
+  # baselineLinks = baselineModel.links.dataframe
+  # baselineNodes = baselineModel.nodes.dataframe
+  # timeseries = baseline.timeseries
+  # print()

@@ -1,11 +1,3 @@
-'''
-Author: your name
-Date: 2021-05-25 22:38:08
-LastEditTime: 2021-05-26 21:48:54
-LastEditors: your name
-Description: In User Settings Edit
-FilePath: \GLUE-with-swmm5\src\utils\NashSutcliffe.py
-'''
 # calculate the Nash-Sutcliffe efficiency coefficient
 import os
 import numpy as np
@@ -29,8 +21,8 @@ def calculateNashSutcliffe(observed_data_path = config['observed_data_path'], si
   # calculate the Nash-Sutcliffe efficiency coefficient
   NS_list = []
   for index in indexes:
-    curObservedDf = df_observed.loc[df_observed['INDEX'] == indexes[0]]
-    curSimulatedDf = df_simulated.loc[df_simulated['INDEX'] == indexes[0]]
+    curObservedDf = df_observed.loc[df_observed['INDEX'] == index]
+    curSimulatedDf = df_simulated.loc[df_simulated['INDEX'] == index]
     if len(curObservedDf) != len(curSimulatedDf):
       raise Exception('data observed and simulated don\'t match')
     length = len(curSimulatedDf)
